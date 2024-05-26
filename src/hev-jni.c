@@ -45,16 +45,16 @@ static pthread_t work_thread;
 static pthread_mutex_t mutex;
 static pthread_key_t current_jni_env;
 
-static void native_start_service (JNIEnv *env, jobject thiz, jstring conig_path,
-                                  jint fd);
+static void native_start_service (JNIEnv *env, jobject thiz, jstring conig_path, jint fd);
+static void native_start_service_from_str (JNIEnv *env, jobject thiz, jstring config_str, jint fd);
 static void native_stop_service (JNIEnv *env, jobject thiz);
 static jlongArray native_get_stats (JNIEnv *env, jobject thiz);
 
 static JNINativeMethod native_methods[] = {
-    { "TProxyStartService", "(Ljava/lang/String;I)V",
-      (void *)native_start_service },
-    { "TProxyStopService", "()V", (void *)native_stop_service },
-    { "TProxyGetStats", "()[J", (void *)native_get_stats },
+    { "startService", "(Ljava/lang/String;I)V", (void *)native_start_service },
+    { "startServiceFromStr", "(Ljava/lang/String;I)V", (void *)native_start_service_from_str },
+    { "stopService", "()V", (void *)native_stop_service },
+    { "getStats", "()[J", (void *)native_get_stats },
 };
 
 static void
