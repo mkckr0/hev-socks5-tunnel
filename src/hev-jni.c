@@ -35,7 +35,8 @@ typedef struct _ThreadData ThreadData;
 
 struct _ThreadData
 {
-    char *path;
+    char *config_path;
+    char *config_str;
     int fd;
 };
 
@@ -89,9 +90,14 @@ thread_handler (void *data)
 {
     ThreadData *tdata = data;
 
-    hev_socks5_tunnel_main (tdata->path, tdata->fd);
+    if (tdata->config_path) {
+        hev_socks5_tunnel_main_from_file (tdata->config_path, tdata->fd);
+    } else {
+        hev_socks5_tunnel_main_from_str ((const unsigned char*)tdata->config_str, strlen(tdata->config_str), tdata->fd);
+    }
 
-    free (tdata->path);
+    free (tdata->config_path);
+    free (tdata->config_str);
     free (tdata);
 
     return NULL;
@@ -107,12 +113,33 @@ native_start_service (JNIEnv *env, jobject thiz, jstring config_path, jint fd)
     if (work_thread)
         return;
 
-    tdata = malloc (sizeof (ThreadData));
+    tdata = calloc (1, sizeof (ThreadData));
     tdata->fd = fd;
 
     bytes = (const jbyte *)(*env)->GetStringUTFChars (env, config_path, NULL);
-    tdata->path = strdup ((const char *)bytes);
+    tdata->config_path = strdup ((const char *)bytes);
     (*env)->ReleaseStringUTFChars (env, config_path, (const char *)bytes);
+
+    pthread_create (&work_thread, NULL, thread_handler, tdata);
+    pthread_mutex_unlock (&mutex);
+}
+
+static void
+native_start_service_from_str (JNIEnv *env, jobject thiz, jstring config_str, jint fd)
+{
+    const jbyte *bytes;
+    ThreadData *tdata;
+
+    pthread_mutex_lock (&mutex);
+    if (work_thread)
+        return;
+
+    tdata = calloc (1, sizeof (ThreadData));
+    tdata->fd = fd;
+
+    bytes = (const jbyte *)(*env)->GetStringUTFChars (env, config_str, NULL);
+    tdata->config_str = strdup ((const char *)bytes);
+    (*env)->ReleaseStringUTFChars (env, config_str, (const char *)bytes);
 
     pthread_create (&work_thread, NULL, thread_handler, tdata);
     pthread_mutex_unlock (&mutex);
